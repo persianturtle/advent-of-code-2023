@@ -11,8 +11,7 @@ function parse(line) {
   if (line$1 === "") {
     return 0;
   }
-  var gameNumber = Belt_Option.getWithDefault(Belt_Int.fromString(Caml_array.get(line$1.split(":"), 0).replace(/\D/g, "")), 0);
-  var isPossible = Caml_array.get(line$1.split(":"), 1).split(";").reduce((function (isPossible, game) {
+  var requiredBagSize = Caml_array.get(line$1.split(":"), 1).split(";").reduce((function (requiredBagSize, game) {
           var state = {};
           [
               "red",
@@ -21,17 +20,34 @@ function parse(line) {
             ].forEach(function (color) {
                 state[color] = game.includes(color) ? Belt_Option.getWithDefault(Belt_Int.fromString(game.replace(new RegExp(".*?(\\d+)\\s" + color + ".*"), "$1")), 0) : 0;
               });
-          if (isPossible && 12 >= Belt_Option.getWithDefault(Js_dict.get(state, "red"), 0) && 13 >= Belt_Option.getWithDefault(Js_dict.get(state, "green"), 0)) {
-            return 14 >= Belt_Option.getWithDefault(Js_dict.get(state, "blue"), 0);
+          var match = Js_dict.get(state, "red");
+          var match$1 = Js_dict.get(state, "green");
+          var match$2 = Js_dict.get(state, "blue");
+          var exit = 0;
+          if (match !== undefined && match$1 !== undefined && match$2 !== undefined) {
+            if (match > requiredBagSize.red) {
+              requiredBagSize.red = match;
+            }
+            if (match$1 > requiredBagSize.green) {
+              requiredBagSize.green = match$1;
+            }
+            if (match$2 > requiredBagSize.blue) {
+              requiredBagSize.blue = match$2;
+            }
+            
           } else {
-            return false;
+            exit = 1;
           }
-        }), true);
-  if (isPossible) {
-    return gameNumber;
-  } else {
-    return 0;
-  }
+          if (exit === 1) {
+            console.log("Error parsing game: " + game + "");
+          }
+          return requiredBagSize;
+        }), {
+        red: 0,
+        green: 0,
+        blue: 0
+      });
+  return Math.imul(Math.imul(requiredBagSize.red, requiredBagSize.green), requiredBagSize.blue);
 }
 
 function sum(input) {
@@ -46,16 +62,9 @@ var input = Utilities.input;
 
 var input2 = "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green\nGame 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue\nGame 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red\nGame 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red\nGame 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green";
 
-var bag = {
-  red: 12,
-  green: 13,
-  blue: 14
-};
-
 export {
   input ,
   input2 ,
-  bag ,
   parse ,
   sum ,
 }

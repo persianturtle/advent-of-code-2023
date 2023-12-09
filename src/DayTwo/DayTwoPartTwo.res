@@ -7,27 +7,19 @@ Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red
 Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green"
 
 type bag = {
-  red: int,
-  green: int,
-  blue: int,
+  mutable red: int,
+  mutable green: int,
+  mutable blue: int,
 }
-
-let bag = {red: 12, green: 13, blue: 14}
 
 let parse = line => {
   switch line->Js.String2.trim {
   | "" => 0
   | line =>
-    let gameNumber =
-      (line->Js.String2.split(":"))[0]
-      ->Js.String2.replaceByRe(%re("/\D/g"), "")
-      ->Belt.Int.fromString
-      ->Belt.Option.getWithDefault(0)
-
-    let isPossible =
+    let requiredBagSize =
       (line->Js.String2.split(":"))[1]
       ->Js.String2.split(";")
-      ->Js.Array2.reduce((isPossible, game) => {
+      ->Js.Array2.reduce((requiredBagSize, game) => {
         let state = Js.Dict.empty()
 
         ["red", "green", "blue"]->Js.Array2.forEach(color => {
@@ -43,13 +35,31 @@ let parse = line => {
           )
         })
 
-        isPossible &&
-        bag.red >= Js.Dict.get(state, "red")->Belt.Option.getWithDefault(0) &&
-        bag.green >= Js.Dict.get(state, "green")->Belt.Option.getWithDefault(0) &&
-        bag.blue >= Js.Dict.get(state, "blue")->Belt.Option.getWithDefault(0)
-      }, true)
+        switch (
+          Js.Dict.get(state, "red"),
+          Js.Dict.get(state, "green"),
+          Js.Dict.get(state, "blue"),
+        ) {
+        | (Some(red), Some(green), Some(blue)) =>
+          if red > requiredBagSize.red {
+            requiredBagSize.red = red
+          }
 
-    isPossible ? gameNumber : 0
+          if green > requiredBagSize.green {
+            requiredBagSize.green = green
+          }
+
+          if blue > requiredBagSize.blue {
+            requiredBagSize.blue = blue
+          }
+
+        | _ => Js.log(`Error parsing game: ${game}`)
+        }
+
+        requiredBagSize
+      }, {red: 0, green: 0, blue: 0})
+
+    requiredBagSize.red * requiredBagSize.green * requiredBagSize.blue
   }
 }
 
