@@ -61,10 +61,19 @@ function populateState(param, line) {
         currentField$1 = "seed-to-soil map";
         break;
     case "seeds" :
-        state.seeds = data.split(" ").filter(function (string) {
+        var data$1 = data.split(" ").filter(function (string) {
                 return string.trim().length > 0;
               }).map(function (number) {
               return Belt_Option.getWithDefault(Belt_Float.fromString(number), 0.0);
+            });
+        data$1.forEach(function (seed, index) {
+              if (index % 2 !== 0) {
+                return ;
+              }
+              var generateRange = (function(min, max) {
+            return Array.from({length: max - min + 1}, (_, key) => key + min)
+          });
+              state.seeds.push(generateRange(seed, seed + Caml_array.get(data$1, index + 1 | 0) - 1.0));
             });
         currentField$1 = "seeds";
         break;
@@ -139,8 +148,10 @@ function calculateLowestLocation(input) {
         }
       ]);
   var state = match[1];
-  return Caml_splice_call.spliceApply(Math.min, [state.seeds.map(function (seed) {
-                    return map(map(map(map(map(map(map(seed, state.seedsToSoil), state.soilToFertilizer), state.fertilizerToWater), state.waterToLight), state.lightToTemperature), state.temperatureToHumidity), state.humidityToLocation);
+  return Caml_splice_call.spliceApply(Math.min, [state.seeds.map(function (seeds) {
+                    return Caml_splice_call.spliceApply(Math.min, [seeds.map(function (seed) {
+                                      return map(map(map(map(map(map(map(seed, state.seedsToSoil), state.soilToFertilizer), state.fertilizerToWater), state.waterToLight), state.lightToTemperature), state.temperatureToHumidity), state.humidityToLocation);
+                                    })]);
                   })]);
 }
 

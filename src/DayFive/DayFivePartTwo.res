@@ -1,5 +1,5 @@
 type state = {
-  mutable seeds: array<float>,
+  seeds: array<array<float>>,
   seedsToSoil: array<(float, float, float)>,
   soilToFertilizer: array<(float, float, float)>,
   fertilizerToWater: array<(float, float, float)>,
@@ -64,11 +64,23 @@ let populateState = ((currentField, state), line) => {
 
   let currentField = switch field {
   | "seeds" =>
-    state.seeds =
+    let data =
       data
       ->Js.String2.split(" ")
       ->Js.Array2.filter(string => string->Js.String2.trim->Js.String2.length > 0)
       ->Js.Array2.map(number => number->Belt.Float.fromString->Belt.Option.getWithDefault(0.0))
+
+    data->Js.Array2.forEachi((seed, index) => {
+      if mod(index, 2) == 0 {
+        let generateRange: (float, float) => array<float> = %raw(`
+          function(min, max) {
+            return Array.from({length: max - min + 1}, (_, key) => key + min)
+          }
+        `)
+
+        state.seeds->Js.Array2.push(generateRange(seed, seed +. data[index + 1] -. 1.0))->ignore
+      }
+    })
     "seeds"
 
   | "seed-to-soil map" =>
@@ -156,15 +168,19 @@ let calculateLowestLocation = input => {
     )
 
   state.seeds
-  ->Js.Array2.map(seed => {
-    seed
-    ->map(state.seedsToSoil)
-    ->map(state.soilToFertilizer)
-    ->map(state.fertilizerToWater)
-    ->map(state.waterToLight)
-    ->map(state.lightToTemperature)
-    ->map(state.temperatureToHumidity)
-    ->map(state.humidityToLocation)
+  ->Js.Array2.map(seeds => {
+    seeds
+    ->Js.Array2.map(seed => {
+      seed
+      ->map(state.seedsToSoil)
+      ->map(state.soilToFertilizer)
+      ->map(state.fertilizerToWater)
+      ->map(state.waterToLight)
+      ->map(state.lightToTemperature)
+      ->map(state.temperatureToHumidity)
+      ->map(state.humidityToLocation)
+    })
+    ->Js.Math.minMany_float
   })
   ->Js.Math.minMany_float
 }
