@@ -105,7 +105,7 @@ function map(number, map$1) {
                           ];
                   }
                   var source = param$1[1];
-                  if (number < source || number > source + param$1[2] - 1.0) {
+                  if (number < source || number > source + param$1[2]) {
                     return [
                             number,
                             false

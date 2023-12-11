@@ -4,158 +4,112 @@ import * as Utilities from "../Utilities.bs.js";
 import * as Belt_Float from "rescript/lib/es6/belt_Float.js";
 import * as Caml_array from "rescript/lib/es6/caml_array.js";
 import * as Belt_Option from "rescript/lib/es6/belt_Option.js";
+import * as Caml_option from "rescript/lib/es6/caml_option.js";
+import * as Caml_exceptions from "rescript/lib/es6/caml_exceptions.js";
 import * as Caml_splice_call from "rescript/lib/es6/caml_splice_call.js";
 
-function parseCategory(data) {
-  var match = data.split(" ").map(function (number) {
-        return Belt_Option.getWithDefault(Belt_Float.fromString(number), 0.0);
-      });
-  if (match.length !== 3) {
-    return [
-            0.0,
-            0.0,
-            0.0
-          ];
-  }
-  var sourceCategory = match[0];
-  var destinationCategory = match[1];
-  var range = match[2];
-  return [
-          sourceCategory,
-          destinationCategory,
-          range
-        ];
-}
+var InvalidInput = /* @__PURE__ */Caml_exceptions.create("DayFivePartTwo.InvalidInput");
 
-function populateState(param, line) {
-  var state = param[1];
-  var currentField = param[0];
-  var field = line.includes(":") ? Caml_array.get(line.split(":"), 0).trim() : currentField;
-  var data = (
-      line.includes(":") ? Caml_array.get(line.split(":"), 1) : line
-    ).trim();
-  var currentField$1;
-  switch (field) {
-    case "fertilizer-to-water map" :
-        if (data.length > 0) {
-          state.fertilizerToWater.push(parseCategory(data));
-        }
-        currentField$1 = "fertilizer-to-water map";
-        break;
-    case "humidity-to-location map" :
-        if (data.length > 0) {
-          state.humidityToLocation.push(parseCategory(data));
-        }
-        currentField$1 = "humidity-to-location map";
-        break;
-    case "light-to-temperature map" :
-        if (data.length > 0) {
-          state.lightToTemperature.push(parseCategory(data));
-        }
-        currentField$1 = "light-to-temperature map";
-        break;
-    case "seed-to-soil map" :
-        if (data.length > 0) {
-          state.seedsToSoil.push(parseCategory(data));
-        }
-        currentField$1 = "seed-to-soil map";
-        break;
-    case "seeds" :
-        var data$1 = data.split(" ").filter(function (string) {
-                return string.trim().length > 0;
-              }).map(function (number) {
+var seeds = {
+  contents: []
+};
+
+var ranges = [];
+
+function convertSpaceSeparateNumbersToFloat(string) {
+  return string.split(" ").map(function (number) {
               return Belt_Option.getWithDefault(Belt_Float.fromString(number), 0.0);
             });
-        data$1.forEach(function (seed, index) {
-              if (index % 2 !== 0) {
+}
+
+Utilities.input.split("\n\n").forEach(function (line, index) {
+      if (index === 0) {
+        var data = convertSpaceSeparateNumbersToFloat(Caml_array.get(line.split(": "), 1));
+        data.forEach(function (seed, index) {
+              if (index % 2 === 0) {
+                seeds.contents.push([
+                      seed,
+                      seed + Caml_array.get(data, index + 1 | 0)
+                    ]);
                 return ;
               }
-              var generateRange = (function(min, max) {
-            return Array.from({length: max - min + 1}, (_, key) => key + min)
-          });
-              state.seeds.push(generateRange(seed, seed + Caml_array.get(data$1, index + 1 | 0) - 1.0));
+              
             });
-        currentField$1 = "seeds";
-        break;
-    case "soil-to-fertilizer map" :
-        if (data.length > 0) {
-          state.soilToFertilizer.push(parseCategory(data));
-        }
-        currentField$1 = "soil-to-fertilizer map";
-        break;
-    case "temperature-to-humidity map" :
-        if (data.length > 0) {
-          state.temperatureToHumidity.push(parseCategory(data));
-        }
-        currentField$1 = "temperature-to-humidity map";
-        break;
-    case "water-to-light map" :
-        if (data.length > 0) {
-          state.waterToLight.push(parseCategory(data));
-        }
-        currentField$1 = "water-to-light map";
-        break;
-    default:
-      currentField$1 = currentField;
-  }
-  return [
-          currentField$1,
-          state
-        ];
-}
+        return ;
+      }
+      ranges.push(Caml_array.get(line.split(":\n"), 1).split("\n").filter(function (line) {
+                    return line.trim().length > 0;
+                  }).map(convertSpaceSeparateNumbersToFloat).map(function (map) {
+                if (map.length !== 3) {
+                  throw {
+                        RE_EXN_ID: InvalidInput,
+                        _1: "The input was invalid.",
+                        Error: new Error()
+                      };
+                }
+                var a = map[0];
+                var b = map[1];
+                var c = map[2];
+                return [
+                        a,
+                        b,
+                        c
+                      ];
+              }));
+    });
 
-function map(number, map$1) {
-  return map$1.reduce((function (param, param$1) {
-                  var number = param[0];
-                  if (param[1]) {
-                    return [
-                            number,
-                            true
-                          ];
-                  }
-                  var source = param$1[1];
-                  if (number < source || number > source + param$1[2] - 1.0) {
-                    return [
-                            number,
-                            false
-                          ];
-                  } else {
-                    return [
-                            number + (param$1[0] - source),
-                            true
-                          ];
-                  }
-                }), [
-                number,
-                false
-              ])[0];
-}
-
-function calculateLowestLocation(input) {
-  var match = input.split("\n").filter(function (line) {
-          return line.trim().length > 0;
-        }).reduce(populateState, [
-        "",
-        {
-          seeds: [],
-          seedsToSoil: [],
-          soilToFertilizer: [],
-          fertilizerToWater: [],
-          waterToLight: [],
-          lightToTemperature: [],
-          temperatureToHumidity: [],
-          humidityToLocation: []
+ranges.forEach(function (range) {
+      var $$new = [];
+      while(seeds.contents.length > 0) {
+        var match = Belt_Option.getExn(Caml_option.undefined_to_opt(seeds.contents.pop()));
+        var e = match[1];
+        var s = match[0];
+        var isMatched = {
+          contents: false
+        };
+        range.forEach((function(s,e,isMatched){
+            return function (param) {
+              var b = param[1];
+              var a = param[0];
+              var os = Math.max(s, b);
+              var oe = Math.min(e, b + param[2]);
+              if (os < oe) {
+                $$new.push([
+                      os - b + a,
+                      oe - b + a
+                    ]);
+                if (os > s) {
+                  seeds.contents.push([
+                        s,
+                        os
+                      ]);
+                }
+                if (e > oe) {
+                  seeds.contents.push([
+                        oe,
+                        e
+                      ]);
+                }
+                isMatched.contents = true;
+                return ;
+              }
+              
+            }
+            }(s,e,isMatched)));
+        if (!isMatched.contents) {
+          $$new.push([
+                s,
+                e
+              ]);
         }
-      ]);
-  var state = match[1];
-  return Caml_splice_call.spliceApply(Math.min, [state.seeds.map(function (seeds) {
-                    return Caml_splice_call.spliceApply(Math.min, [seeds.map(function (seed) {
-                                      return map(map(map(map(map(map(map(seed, state.seedsToSoil), state.soilToFertilizer), state.fertilizerToWater), state.waterToLight), state.lightToTemperature), state.temperatureToHumidity), state.humidityToLocation);
-                                    })]);
-                  })]);
-}
+        
+      };
+      seeds.contents = $$new;
+    });
 
-console.log(calculateLowestLocation(Utilities.input));
+console.log(Caml_splice_call.spliceApply(Math.min, [seeds.contents.map(function (param) {
+                return param[0];
+              })]));
 
 var input = Utilities.input;
 
@@ -164,9 +118,9 @@ var input2 = "seeds: 79 14 55 13\n\nseed-to-soil map:\n50 98 2\n52 50 48\n\nsoil
 export {
   input ,
   input2 ,
-  parseCategory ,
-  populateState ,
-  map ,
-  calculateLowestLocation ,
+  InvalidInput ,
+  seeds ,
+  ranges ,
+  convertSpaceSeparateNumbersToFloat ,
 }
 /*  Not a pure module */

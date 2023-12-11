@@ -1,14 +1,6 @@
-type state = {
-  seeds: array<array<float>>,
-  seedsToSoil: array<(float, float, float)>,
-  soilToFertilizer: array<(float, float, float)>,
-  fertilizerToWater: array<(float, float, float)>,
-  waterToLight: array<(float, float, float)>,
-  lightToTemperature: array<(float, float, float)>,
-  temperatureToHumidity: array<(float, float, float)>,
-  humidityToLocation: array<(float, float, float)>,
-}
-
+/**
+ * Translated from here: https://www.youtube.com/watch?v=NmxHw_bHhGM
+ */
 let input = Utilities.input
 
 let input2 = "seeds: 79 14 55 13
@@ -45,144 +37,74 @@ humidity-to-location map:
 60 56 37
 56 93 4"
 
-let parseCategory = data => {
-  switch data
+exception InvalidInput(string)
+
+let seeds = ref([])
+let ranges = []
+
+let convertSpaceSeparateNumbersToFloat = string =>
+  string
   ->Js.String2.split(" ")
-  ->Js.Array2.map(number => number->Belt.Float.fromString->Belt.Option.getWithDefault(0.0)) {
-  | [sourceCategory, destinationCategory, range] => (sourceCategory, destinationCategory, range)
-  | _ => (0.0, 0.0, 0.0)
-  }
-}
+  ->Js.Array2.map(number => number->Belt.Float.fromString->Belt.Option.getWithDefault(0.0))
 
-let populateState = ((currentField, state), line) => {
-  let field =
-    line->Js.String2.includes(":")
-      ? (line->Js.String2.split(":"))[0]->Js.String2.trim
-      : currentField
-  let data =
-    (line->Js.String2.includes(":") ? (line->Js.String2.split(":"))[1] : line)->Js.String2.trim
-
-  let currentField = switch field {
-  | "seeds" =>
-    let data =
-      data
-      ->Js.String2.split(" ")
-      ->Js.Array2.filter(string => string->Js.String2.trim->Js.String2.length > 0)
-      ->Js.Array2.map(number => number->Belt.Float.fromString->Belt.Option.getWithDefault(0.0))
+input
+->Js.String2.split("\n\n")
+->Js.Array2.forEachi((line, index) => {
+  if index == 0 {
+    let data = (line->Js.String2.split(": "))[1]->convertSpaceSeparateNumbersToFloat
 
     data->Js.Array2.forEachi((seed, index) => {
       if mod(index, 2) == 0 {
-        let generateRange: (float, float) => array<float> = %raw(`
-          function(min, max) {
-            return Array.from({length: max - min + 1}, (_, key) => key + min)
-          }
-        `)
-
-        state.seeds->Js.Array2.push(generateRange(seed, seed +. data[index + 1] -. 1.0))->ignore
+        seeds.contents->Js.Array2.push((seed, seed +. data[index + 1]))->ignore
       }
     })
-    "seeds"
-
-  | "seed-to-soil map" =>
-    if data->Js.String2.length > 0 {
-      state.seedsToSoil->Js.Array2.push(parseCategory(data))->ignore
-    }
-    "seed-to-soil map"
-
-  | "soil-to-fertilizer map" =>
-    if data->Js.String2.length > 0 {
-      state.soilToFertilizer->Js.Array2.push(parseCategory(data))->ignore
-    }
-    "soil-to-fertilizer map"
-
-  | "fertilizer-to-water map" =>
-    if data->Js.String2.length > 0 {
-      state.fertilizerToWater->Js.Array2.push(parseCategory(data))->ignore
-    }
-    "fertilizer-to-water map"
-
-  | "water-to-light map" =>
-    if data->Js.String2.length > 0 {
-      state.waterToLight->Js.Array2.push(parseCategory(data))->ignore
-    }
-    "water-to-light map"
-
-  | "light-to-temperature map" =>
-    if data->Js.String2.length > 0 {
-      state.lightToTemperature->Js.Array2.push(parseCategory(data))->ignore
-    }
-    "light-to-temperature map"
-
-  | "temperature-to-humidity map" =>
-    if data->Js.String2.length > 0 {
-      state.temperatureToHumidity->Js.Array2.push(parseCategory(data))->ignore
-    }
-    "temperature-to-humidity map"
-
-  | "humidity-to-location map" =>
-    if data->Js.String2.length > 0 {
-      state.humidityToLocation->Js.Array2.push(parseCategory(data))->ignore
-    }
-    "humidity-to-location map"
-
-  | _ => currentField
-  }
-
-  (currentField, state)
-}
-
-let map = (number, map) => {
-  let (number, _) = map->Js.Array2.reduce(((number, isMapped), (destination, source, range)) => {
-    if isMapped {
-      (number, true)
-    } else if number < source || number > source +. range -. 1.0 {
-      (number, false)
-    } else {
-      (number +. (destination -. source), true)
-    }
-  }, (number, false))
-
-  number
-}
-
-let calculateLowestLocation = input => {
-  let (_, state) =
-    input
-    ->Js.String2.split("\n")
-    ->Js.Array2.filter(line => line->Js.String2.trim->Js.String2.length > 0)
-    ->Js.Array2.reduce(
-      populateState,
-      (
-        "",
-        {
-          seeds: [],
-          seedsToSoil: [],
-          soilToFertilizer: [],
-          fertilizerToWater: [],
-          waterToLight: [],
-          lightToTemperature: [],
-          temperatureToHumidity: [],
-          humidityToLocation: [],
-        },
-      ),
+  } else {
+    ranges
+    ->Js.Array2.push(
+      (line->Js.String2.split(":\n"))[1]
+      ->Js.String2.split("\n")
+      ->Js.Array2.filter(line => line->Js.String2.trim->Js.String2.length > 0)
+      ->Js.Array2.map(convertSpaceSeparateNumbersToFloat)
+      ->Js.Array2.map(map => {
+        switch map {
+        | [a, b, c] => (a, b, c)
+        | _ => raise(InvalidInput("The input was invalid."))
+        }
+      }),
     )
+    ->ignore
+  }
+})
 
-  state.seeds
-  ->Js.Array2.map(seeds => {
-    seeds
-    ->Js.Array2.map(seed => {
-      seed
-      ->map(state.seedsToSoil)
-      ->map(state.soilToFertilizer)
-      ->map(state.fertilizerToWater)
-      ->map(state.waterToLight)
-      ->map(state.lightToTemperature)
-      ->map(state.temperatureToHumidity)
-      ->map(state.humidityToLocation)
+ranges->Js.Array2.forEach(range => {
+  let new = []
+
+  while seeds.contents->Js.Array2.length > 0 {
+    let (s, e) = seeds.contents->Js.Array2.pop->Belt.Option.getExn
+
+    let isMatched = ref(false)
+    range->Js.Array2.forEach(((a, b, c)) => {
+      let os = Js.Math.max_float(s, b)
+      let oe = Js.Math.min_float(e, b +. c)
+
+      if os < oe {
+        new->Js.Array2.push((os -. b +. a, oe -. b +. a))->ignore
+        if os > s {
+          seeds.contents->Js.Array2.push((s, os))->ignore
+        }
+        if e > oe {
+          seeds.contents->Js.Array2.push((oe, e))->ignore
+        }
+
+        isMatched := true
+      }
     })
-    ->Js.Math.minMany_float
-  })
-  ->Js.Math.minMany_float
-}
 
-calculateLowestLocation(input)->Js.log
+    if !isMatched.contents {
+      new->Js.Array2.push((s, e))->ignore
+    }
+  }
+  seeds := new
+})
+
+Js.log(seeds.contents->Js.Array2.map(((start, _)) => start)->Js.Math.minMany_float)

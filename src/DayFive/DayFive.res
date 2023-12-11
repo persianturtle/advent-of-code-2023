@@ -123,7 +123,7 @@ let map = (number, map) => {
   let (number, _) = map->Js.Array2.reduce(((number, isMapped), (destination, source, range)) => {
     if isMapped {
       (number, true)
-    } else if number < source || number > source +. range -. 1.0 {
+    } else if number < source || number > source +. range {
       (number, false)
     } else {
       (number +. (destination -. source), true)
