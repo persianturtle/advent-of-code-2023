@@ -156,24 +156,11 @@ function mapHandToStrength(hand) {
     case 4 :
         var match$11 = match[0];
         if (match$11[0] === "J") {
-          var match$12 = match$11[1];
-          if (match$12 !== 1) {
-            if (match$12 === 2) {
-              var match$13 = match[1];
-              if (match$13[1] === 1) {
-                return 4;
-              }
-              
-            }
-            
-          } else {
-            var match$14 = match[1];
-            if (match$14[1] !== 2) {
-              return 1;
-            } else {
-              return 4;
-            }
+          var match$12 = match[1];
+          if ((match$11[1] + match$12[1] | 0) === 3) {
+            return 4;
           }
+          
         }
         if (match$11[1] !== 2) {
           return 1;
@@ -181,8 +168,8 @@ function mapHandToStrength(hand) {
           return 2;
         }
     case 5 :
-        var match$15 = match[0];
-        if (match$15[0] === "J" && match$15[1] === 1) {
+        var match$13 = match[0];
+        if (match$13[0] === "J" && match$13[1] === 1) {
           return 2;
         } else {
           return 1;
